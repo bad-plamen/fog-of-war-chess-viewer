@@ -1,0 +1,138 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="UTF-8">
+<title>Chess Viewer</title>
+<style>
+body{background:#1a1a1a;color:#fff;font-family:Arial;padding:20px;text-align:center}
+h2{color:#f0d9b5}
+textarea{width:95%;height:150px;padding:10px;font-size:10px;background:#2a2a2a;color:#ddd;border:1px solid #555;border-radius:5px;font-family:monospace}
+button{padding:15px 30px;margin:10px;font-size:18px;background:#4CAF50;color:#fff;border:none;border-radius:5px;cursor:pointer;font-weight:bold}
+button:hover{background:#388E3C}
+button.red{background:#f44336}
+button.red:hover{background:#c62828}
+#board{margin-top:20px;display:inline-block;border:3px solid #666;border-radius:5px}
+.row{display:flex}
+.cell{width:65px;height:65px;display:flex;align-items:center;justify-content:center;font-size:40px;border:1px solid #444}
+.light{background:#B58863}
+.dark{background:#F0D9B5}
+.white-piece{color:#FFFFFF;text-shadow:1px 1px 2px #000}
+.black-piece{color:#1A1A1A;text-shadow:1px 1px 2px #fff}
+#info{color:#ccc;margin:10px;font-size:14px}
+</style>
+</head>
+<body>
+<h2>bad_plamen Viewer</h2>
+<p id="info">Постави ЦЯЛОТО съобщение от играта тук</p>
+<textarea id="input" placeholder="Постави съобщението тук... (copy-paste от чата)"></textarea><br>
+<button onclick="parseAndShow()">ПОКАЖИ ДЪСКАТА</button>
+<button class="red" onclick="document.getElementById('input').value='';document.getElementById('board').innerHTML='';document.getElementById('info').innerHTML='Постави ЦЯЛОТО съобщение от играта тук'">ИЗЧИСТИ</button>
+<div id="board"></div>
+
+<script>
+var SYM={
+'0P':'♙','0N':'♘','0B':'♗','0R':'♖','0Q':'♕','0K':'♔',
+'2P':'♟','2N':'♞','2B':'♝','2R':'♜','2Q':'♛','2K':'♚'
+};
+
+function extractFEN(text) {
+    var re = /\\?"fen\\?"\s*:\s*\\?"((?:[^"\\]|\\"|\\\\|\\.)*?)\\?"/g;
+    var matches = [];
+    var m;
+    while ((m = re.exec(text)) !== null) {
+        var val = m[1];
+        val = val.replace(/\\"/g, '"').replace(/\\\\/g, '\\').replace(/\\n/g, '');
+        if (val.indexOf('x,x,x') >= 0 && val.indexOf('/') >= 0) {
+            matches.push(val);
+        }
+    }
+    
+    if (matches.length === 0) {
+        var lines = text.split(/[,\n\r]+/);
+        var fenLike = '';
+        for (var i = 0; i < lines.length; i++) {
+            if (lines[i].indexOf('x,x,x') >= 0) {
+                fenLike = lines[i];
+                break;
+            }
+        }
+        if (fenLike) {
+            fenLike = fenLike.replace(/^["']+|["']+$/g, '');
+            matches.push(fenLike);
+        }
+    }
+    
+    if (matches.length > 0) {
+        matches.sort(function(a,b){return b.length - a.length});
+        return matches[0];
+    }
+    
+    return null;
+}
+
+function parseAndShow(){
+var text=document.getElementById('input').value.trim();
+if(!text){alert('Постави текста първо!');return}
+
+var fen=extractFEN(text);
+if(!fen){
+alert('Не намерих FEN!\n\nУвери се че си копирал ЦЯЛОТО съобщение.');
+document.getElementById('info').innerHTML='<b style="color:red">FEN не е намерен. Копирай цялото съобщение от чата.</b>';
+return;
+}
+
+var pureFen=fen.split('-')[0];
+
+var rows=pureFen.split('/');
+var html='';
+var totalCells=0;
+var pieceCount=0;
+var rowCount=0;
+
+for(var i=0;i<rows.length;i++){
+var cells=rows[i].split(',');
+var rowHTML='';
+var colCount=0;
+var hasSomething=false;
+
+for(var j=0;j<cells.length;j++){
+var c=cells[j].trim();
+
+if(SYM[c]){
+var pieceClass = c.startsWith('0') ? 'white-piece' : 'black-piece';
+var bgClass = (rowCount+colCount)%2===0 ? 'dark' : 'light';
+rowHTML+='<div class="cell '+bgClass+' '+pieceClass+'">'+SYM[c]+'</div>';
+colCount++;
+totalCells++;
+pieceCount++;
+hasSomething=true;
+}
+else if(/^\d+$/.test(c)){
+var n=parseInt(c);
+for(var k=0;k<n;k++){
+var bgClass = (rowCount+colCount)%2===0 ? 'dark' : 'light';
+rowHTML+='<div class="cell '+bgClass+'"></div>';
+colCount++;
+totalCells++;
+}
+hasSomething=true;
+}
+}
+
+if(hasSomething){
+html+='<div class="row">'+rowHTML+'</div>';
+rowCount++;
+}
+}
+
+if(pieceCount===0){
+document.getElementById('info').innerHTML='<b style="color:orange">Намерен FEN но без фигури?</b>';
+document.getElementById('board').innerHTML='';
+}else{
+document.getElementById('info').innerHTML='Показани са: '+totalCells+' полета, '+pieceCount+' фигури';
+document.getElementById('board').innerHTML=html;
+}
+}
+</script>
+</body>
+</html>
